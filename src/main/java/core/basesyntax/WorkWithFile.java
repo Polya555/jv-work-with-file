@@ -24,28 +24,80 @@ public class WorkWithFile {
         return lines;
     }
 
-    public void getStatistic(String fromFileName, String toFileName) {
-        List<String> lines = readLines(fromFileName);
+    public enum Operation {
+        SUPPLY("supply"),
+        BUY("buy");
+
+        private final String code;
+
+        Operation(String code) {
+            this.code = code;
+        }
+
+        public String getCode() {
+            return code;
+        }
+    }
+
+    private static class Statistics {
+        private final int supply;
+        private final int buy;
+
+        Statistics(int supply, int buy) {
+            this.supply = supply;
+            this.buy = buy;
+        }
+
+        public int getSupply() {
+            return supply;
+        }
+
+        public int getBuy() {
+            return buy;
+        }
+    }
+
+    private Statistics calculateStatistics(List<String> lines) {
         int supply = 0;
         int buy = 0;
         for (String line : lines) {
             String[] parts = line.split(",");
             if (parts.length != 2) {
-                throw new RuntimeException("Is not working");
+                throw new RuntimeException("Invalid data format in line: " + line);
             }
-            String operation = parts[0].trim();
+            String operationCodeFromFile = parts[0].trim();
             try {
                 int n = Integer.parseInt(parts[1].trim());
-                if ("supply".equals(operation)) {
-                    supply += n;
-                } else if ("buy".equals(operation)) {
-                    buy += n;
+                Operation operationType = null;
+                if (Operation.SUPPLY.getCode().equals(operationCodeFromFile)) {
+                    operationType = Operation.SUPPLY;
+                } else if (Operation.BUY.getCode().equals(operationCodeFromFile)) {
+                    operationType = Operation.BUY;
+                } else {
+                    throw new RuntimeException("Unsupported operation: " + operationCodeFromFile);
+                }
+                switch (operationType) {
+                    case SUPPLY:
+                        supply += n;
+                        break;
+                    case BUY:
+                        buy += n;
+                        break;
+                    default:
+                        throw new IllegalStateException("Unexpected operation type: "
+                                + operationType);
                 }
             } catch (NumberFormatException e) {
-                throw new RuntimeException("results are incorrect");
+                throw new RuntimeException("Invalid number format in line: " + line, e);
             }
         }
-        String report = buildReport(supply, buy);
+        return new Statistics(supply, buy);
+    }
+
+    public void getStatistic(String fromFileName, String toFileName) {
+        List<String> lines = readLines(fromFileName);
+        Statistics stats = calculateStatistics(lines);
+        String report = buildReport(stats.getSupply(), stats.getBuy());
         writeReport(toFileName, report);
     }
 
